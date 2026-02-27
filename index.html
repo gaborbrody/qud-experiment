@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Language Comprehension Study</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        background: #fff;
+        color: #1a1a1a;
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 40px 20px;
+    }
+
+    #experiment-container {
+        max-width: 740px;
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    h2 {
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 1.2em;
+        color: #111;
+    }
+
+    p { margin-bottom: 1em; color: #333; font-size: 0.95rem; }
+
+    .consent-text {
+        font-size: 0.9rem;
+        line-height: 1.7;
+        color: #444;
+    }
+
+    .consent-text p { margin-bottom: 0.8em; }
+
+    .framing-phrase { font-weight: bold; }
+
+    .btn {
+        display: inline-block;
+        padding: 10px 28px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #fff;
+        background: #222;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+
+    .btn:hover { background: #444; }
+    .btn:disabled { background: #aaa; cursor: not-allowed; }
+
+    .progress {
+        font-size: 0.8rem;
+        color: #999;
+        margin-bottom: 16px;
+    }
+
+    .trial-reminder {
+        font-size: 0.85rem;
+        color: #666;
+        background: #f9f9f9;
+        border-left: 3px solid #ccc;
+        padding: 8px 12px;
+        margin-bottom: 18px;
+        line-height: 1.5;
+    }
+
+    .prompt {
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 18px;
+        color: #111;
+    }
+
+    /* ===== Matching Task Styles ===== */
+
+    .matching-area {
+        display: flex;
+        gap: 28px;
+        margin-bottom: 28px;
+    }
+
+    .questions-column, .answers-column {
+        flex: 1;
+    }
+
+    .column-header {
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #888;
+        margin-bottom: 10px;
+    }
+
+    .question-card {
+        background: #f8f8f8;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 14px 16px;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        color: #222;
+        min-height: 80px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .question-card.drop-hover {
+        border-color: #666;
+        box-shadow: 0 0 0 2px rgba(0,0,0,0.08);
+    }
+
+    .question-card .label-tag {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #999;
+        background: #eee;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-bottom: 6px;
+    }
+
+    .drop-zone {
+        min-height: 44px;
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        margin-top: 10px;
+        padding: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: border-color 0.2s, background 0.2s;
+    }
+
+    .drop-zone.empty {
+        color: #bbb;
+        font-size: 0.8rem;
+    }
+
+    .drop-zone.drop-hover {
+        border-color: #666;
+        background: #f0f0f0;
+    }
+
+    .drop-zone.filled {
+        border-style: solid;
+        border-color: #999;
+        background: #fff;
+    }
+
+    .answer-pill {
+        display: inline-block;
+        background: #222;
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 5px;
+        font-size: 0.88rem;
+        cursor: grab;
+        user-select: none;
+        transition: opacity 0.15s, transform 0.1s;
+        line-height: 1.4;
+        max-width: 100%;
+    }
+
+    .answer-pill:active {
+        cursor: grabbing;
+        transform: scale(1.03);
+    }
+
+    .answer-pill.dragging {
+        opacity: 0.4;
+    }
+
+    .answer-pill.in-dropzone {
+        cursor: grab;
+        font-size: 0.85rem;
+        background: #333;
+    }
+
+    .answers-pool {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 100px;
+        padding: 10px;
+        background: #fafafa;
+        border: 1px solid #eee;
+        border-radius: 6px;
+    }
+
+    .answers-pool.empty-pool {
+        align-items: center;
+        justify-content: center;
+        color: #ccc;
+        font-size: 0.8rem;
+    }
+
+    .thank-you-text {
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: #333;
+    }
+
+    .download-link {
+        display: inline-block;
+        margin-top: 20px;
+        font-size: 0.8rem;
+        color: #888;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+
+    .download-link:hover { color: #555; }
+
+    .completion-code {
+        margin-top: 20px;
+        padding: 12px 16px;
+        background: #f8f8f8;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        font-family: monospace;
+        font-size: 1.1rem;
+        text-align: center;
+        letter-spacing: 1px;
+    }
+
+    .prolific-input {
+        width: 100%;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 5px;
+        margin-bottom: 16px;
+        font-family: inherit;
+        transition: border-color 0.15s;
+    }
+
+    .prolific-input:focus {
+        outline: none;
+        border-color: #666;
+    }
+
+    .prolific-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #333;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .prolific-return {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 28px;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: #fff;
+        background: #222;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background 0.15s;
+    }
+
+    .prolific-return:hover { background: #444; }
+
+    .touch-dragging {
+        position: fixed;
+        z-index: 1000;
+        pointer-events: none;
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+
+    @media (max-width: 600px) {
+        .matching-area {
+            flex-direction: column;
+            gap: 20px;
+        }
+    }
+</style>
+</head>
+<body>
+<div id="experiment-container">
+
+    <!-- ==================== CONSENT ==================== -->
+    <div id="consent-screen" class="screen active">
+        <h2>Consent Statement</h2>
+        <div class="consent-text">
+            <p>Consent statement: By answering the following questions, you are consenting to participate in a research study being performed by Dr. Gabor Brody, PhD, at Yale University. (<a href="mailto:gabor.brody@yale.edu">gabor.brody@yale.edu</a>).</p>
+            <p>In this research, you will: see or hear written short stories, sentences or words, videos and/or images. You will be asked to choose between two or more alternatives or give ratings using a keyboard or mouse.</p>
+            <p>If you have questions about the research, please contact <a href="mailto:gabor.brody@yale.edu">gabor.brody@yale.edu</a>. Participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation at any time without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you, and all data will be coded with subject numbers separate from your Mturk/Prolific/Testable ID. Anonymized data may be shared with collaborating universities.</p>
+            <p><strong>I have read and understood the consent statement. I am at least 18 years of age.</strong></p>
+        </div>
+        <button class="btn" onclick="showInstructions()">I consent</button>
+    </div>
+
+    <!-- ==================== PROLIFIC ID ==================== -->
+    <div id="prolific-screen" class="screen">
+        <h2>Participant ID</h2>
+        <p>Please confirm your Prolific ID below. It should be filled in automatically — if not, please enter it manually.</p>
+        <label class="prolific-label" for="prolific-id-input">Prolific ID</label>
+        <input type="text" id="prolific-id-input" class="prolific-input" placeholder="Enter your Prolific ID">
+        <button class="btn" id="prolific-continue-btn" onclick="saveProlificId()" disabled>Continue</button>
+    </div>
+
+    <!-- ==================== INSTRUCTIONS ==================== -->
+    <div id="instructions-screen" class="screen">
+        <h2>Instructions</h2>
+        <p>In this study, you will see pairs of questions asked by different people, along with two possible answers.</p>
+        <p>Your task is to <strong>match each answer to the question it goes best with</strong> by dragging the answer into the box below the question.</p>
+        <p>In some cases, both answers might seem reasonable for both questions. When that happens, please go with whatever matching <strong>feels most natural</strong> to you.</p>
+        <p>There are no right or wrong answers for many of the items — we are interested in your intuitions.</p>
+        <p>The study takes approximately <strong>3–5 minutes</strong>.</p>
+        <br>
+        <button class="btn" onclick="startExperiment()">Start the experiment</button>
+    </div>
+
+    <!-- ==================== TRIAL ==================== -->
+    <div id="trial-screen" class="screen">
+        <div class="progress" id="progress-text"></div>
+        <div class="trial-reminder">If both answers could work for both questions, match them in the way that feels <strong>most natural</strong> to you.</div>
+        <div class="prompt">Match each answer to the question it goes best with.</div>
+        <div class="matching-area" id="matching-area"></div>
+        <button class="btn" id="next-btn" disabled onclick="submitTrial()">Next</button>
+    </div>
+
+    <!-- ==================== THANK YOU ==================== -->
+    <div id="thankyou-screen" class="screen">
+        <h2>Thank you!</h2>
+        <div class="thank-you-text">
+            <p>Your responses have been recorded. Please click the button below to return to Prolific and complete the study.</p>
+        </div>
+        <div class="completion-code" id="completion-code"></div>
+        <br>
+        <a id="prolific-return-link" class="prolific-return" href="#" target="_blank">Return to Prolific</a>
+        <br>
+        <span class="download-link" onclick="downloadData()">Download data (researcher use)</span>
+    </div>
+
+</div>
+
+<script>
+// =============================================================
+// QUD Urgency Experiment 1 — Matching Task
+// =============================================================
+// 2 practice controls (always first: 1 timing, 1 morality)
+// Then shuffled:
+//   4 experimental items
+//   2 timing controls
+//   2 morality controls
+// DV: which answer is matched to which question
+// =============================================================
+
+// =====================
+// GITHUB CONFIG — Fill these in before deploying
+// =====================
+// 1. Create a PRIVATE repo (e.g., "qud-experiment-data") to store responses
+// 2. Generate a fine-grained PAT at https://github.com/settings/personal-access-tokens/new
+//    - Scope it to ONLY the private data repo
+//    - Grant "Issues: Read and write" permission (nothing else)
+// 3. Paste the values below:
+// To avoid GitHub's secret scanner blocking your push, the token is stored
+// base64-encoded. To generate yours, run in any browser console:
+//   btoa("github_pat_YOUR_ACTUAL_TOKEN")
+// Then paste the result below.
+var GITHUB_TOKEN_B64 = "Z2l0aHViX3BhdF8xMUFRUElYVVEwTmFvMUhRMmw5S1BRXzdDQm9HTHFPT3lLRVFYWHFtT0tQQWhobm5ON2pONE5kbHpBU3poaUZSYmJWSzdNR1hUNkx6VUcyR3VY";
+var GITHUB_DATA_REPO = "gaborbrody/qud-experiment-data";
+
+// Prolific return URL — replace XXXXXXX with your study's completion code
+var PROLIFIC_RETURN_URL = "https://app.prolific.com/submissions/complete?cc=XXXXXXX";
+// =====================
+// STIMULI
+// =====================
+
+// --- PRACTICE ITEMS (always shown first, in this order) ---
+var practiceItems = [
+    {
+        id: "practice_time",
+        type: "practice_timing",
+        scenario: "doctor_appointment",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to get a doctor\'s appointment this week?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to get a doctor\'s appointment this week?'
+        },
+        answer_a: { key: "immediate", text: "I\u2019ll call the office right away" },
+        answer_b: { key: "delayed", text: "I can check the schedule whenever" },
+        correct_mapping: { "urgent": "immediate", "not_urgent": "delayed" }
+    },
+    {
+        id: "practice_moral",
+        type: "practice_morality",
+        scenario: "umbrella",
+        question_a: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to grab an umbrella from the lost and found?'
+        },
+        question_b: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to steal someone\'s umbrella from the coat rack without them seeing?'
+        },
+        answer_a: { key: "innocent", text: "Yes, they usually don\u2019t mind" },
+        answer_b: { key: "moral", text: "No, that would be wrong" },
+        correct_mapping: { "grab": "innocent", "steal": "moral" }
+    }
+];
+
+// --- MAIN ITEMS (shuffled) ---
+var mainItems = [
+    // --- EXPERIMENTAL ITEMS ---
+    {
+        id: "exp_1",
+        type: "experimental",
+        scenario: "stealing_register",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to take money from the cash register without being noticed?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to take money from the cash register without being noticed?'
+        },
+        answer_a: { key: "no", text: "No, it would be stealing" },
+        answer_b: { key: "yes", text: "Yes, but it would be stealing" }
+    },
+    {
+        id: "exp_2",
+        type: "experimental",
+        scenario: "cheating_exam",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to copy the answers from the teacher\'s desk without getting caught?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to copy the answers from the teacher\'s desk without getting caught?'
+        },
+        answer_a: { key: "no", text: "No, it would be cheating" },
+        answer_b: { key: "yes", text: "Yes, but it would be cheating" }
+    },
+    {
+        id: "exp_3",
+        type: "experimental",
+        scenario: "forging_signature",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to forge a parent\'s signature convincingly enough to fool the teacher?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to forge a parent\'s signature convincingly enough to fool the teacher?'
+        },
+        answer_a: { key: "no", text: "No, it would be forgery" },
+        answer_b: { key: "yes", text: "Yes, but it would be forgery" }
+    },
+    {
+        id: "exp_4",
+        type: "experimental",
+        scenario: "shoplifting",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to walk out with the jacket under your coat without the sensors going off?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to walk out with the jacket under your coat without the sensors going off?'
+        },
+        answer_a: { key: "no", text: "No, it would be stealing" },
+        answer_b: { key: "yes", text: "Yes, but it would be stealing" }
+    },
+
+    // --- TIMING CONTROLS ---
+    {
+        id: "ctrl_time_1",
+        type: "control_timing",
+        scenario: "moving_help",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think you could help me move this weekend?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think you could help me move this weekend?'
+        },
+        answer_a: { key: "immediate", text: "Let me check, it will only take one moment" },
+        answer_b: { key: "delayed", text: "Sure, I\u2019ll get back to you tomorrow" },
+        correct_mapping: { "urgent": "immediate", "not_urgent": "delayed" }
+    },
+    {
+        id: "ctrl_time_2",
+        type: "control_timing",
+        scenario: "plumber",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to get a plumber to fix the leak?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to get a plumber to fix the leak?'
+        },
+        answer_a: { key: "immediate", text: "Let me make some calls right now" },
+        answer_b: { key: "delayed", text: "I\u2019ll look into it when I get a chance" },
+        correct_mapping: { "urgent": "immediate", "not_urgent": "delayed" }
+    },
+
+    // --- MORALITY CONTROLS ---
+    {
+        id: "ctrl_moral_1",
+        type: "control_morality",
+        scenario: "pen",
+        question_a: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to borrow a pen from the front desk?'
+        },
+        question_b: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to take someone\'s pen without them noticing?'
+        },
+        answer_a: { key: "innocent", text: "Yes, they usually have extras" },
+        answer_b: { key: "moral", text: "No, that would be wrong" },
+        correct_mapping: { "borrow": "innocent", "take": "moral" }
+    },
+    {
+        id: "ctrl_moral_2",
+        type: "control_morality",
+        scenario: "neighbor",
+        question_a: {
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to ask the neighbor to turn down the music?'
+        },
+        question_b: {
+            urgency: "urgent",
+            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to slash the neighbor\'s tires so they can\'t go to the party?'
+        },
+        answer_a: { key: "innocent", text: "Yes, just knock on their door" },
+        answer_b: { key: "moral", text: "No, that would be terrible" },
+        correct_mapping: { "ask": "innocent", "slash": "moral" }
+    }
+];
+
+// =====================
+// STATE
+// =====================
+
+var participantId = generateUUID();
+var prolificId = "";
+var trials = [];
+var currentTrialIndex = 0;
+var trialData = [];
+var trialStartTime = 0;
+
+var draggedEl = null;
+var dragSourceZone = null;
+
+// =====================
+// SETUP
+// =====================
+
+function setupTrials() {
+    // Practice items first (in fixed order), then shuffled main items
+    trials = practiceItems.slice().concat(shuffleArray(mainItems.slice()));
+}
+
+// =====================
+// DISPLAY
+// =====================
+
+function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(function(s) {
+        s.classList.remove('active');
+    });
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+function showProlificScreen() {
+    showScreen('prolific-screen');
+    // Auto-fill Prolific ID from URL parameter
+    var urlParams = new URLSearchParams(window.location.search);
+    var pid = urlParams.get('PROLIFIC_PID') || '';
+    var input = document.getElementById('prolific-id-input');
+    if (pid) {
+        input.value = pid;
+        document.getElementById('prolific-continue-btn').disabled = false;
+    }
+    input.addEventListener('input', function() {
+        document.getElementById('prolific-continue-btn').disabled = !this.value.trim();
+    });
+}
+
+function saveProlificId() {
+    prolificId = document.getElementById('prolific-id-input').value.trim();
+    if (!prolificId) return;
+    showScreen('instructions-screen');
+}
+
+function showInstructions() {
+    showProlificScreen();
+}
+
+function startExperiment() {
+    setupTrials();
+    currentTrialIndex = 0;
+    showTrial();
+}
+
+function showTrial() {
+    if (currentTrialIndex >= trials.length) {
+        finishExperiment();
+        return;
+    }
+
+    showScreen('trial-screen');
+
+    var trial = trials[currentTrialIndex];
+
+    document.getElementById('progress-text').textContent =
+        "Question " + (currentTrialIndex + 1) + " of " + trials.length;
+
+    // Randomize question order (top/bottom)
+    var qOrder = Math.random() < 0.5 ? ["a", "b"] : ["b", "a"];
+    // Randomize answer order in pool
+    var aOrder = Math.random() < 0.5 ? ["a", "b"] : ["b", "a"];
+
+    trial._qOrder = qOrder;
+    trial._aOrder = aOrder;
+
+    var q1 = trial["question_" + qOrder[0]];
+    var q2 = trial["question_" + qOrder[1]];
+    var a1 = trial["answer_" + aOrder[0]];
+    var a2 = trial["answer_" + aOrder[1]];
+
+    var html =
+        '<div class="questions-column">' +
+            '<div class="column-header">Questions</div>' +
+            '<div class="question-card" id="qcard-0">' +
+                '<div class="label-tag">Question 1</div>' +
+                '<div>' + q1.text + '</div>' +
+                '<div class="drop-zone empty" id="drop-0" data-q-index="0" data-q-key="' + qOrder[0] + '">' +
+                    'drag answer here' +
+                '</div>' +
+            '</div>' +
+            '<div class="question-card" id="qcard-1">' +
+                '<div class="label-tag">Question 2</div>' +
+                '<div>' + q2.text + '</div>' +
+                '<div class="drop-zone empty" id="drop-1" data-q-index="1" data-q-key="' + qOrder[1] + '">' +
+                    'drag answer here' +
+                '</div>' +
+            '</div>' +
+        '</div>' +
+        '<div class="answers-column">' +
+            '<div class="column-header">Answers</div>' +
+            '<div class="answers-pool" id="answers-pool">' +
+                '<div class="answer-pill" draggable="true" id="pill-0" data-a-key="' + aOrder[0] + '">' + a1.text + '</div>' +
+                '<div class="answer-pill" draggable="true" id="pill-1" data-a-key="' + aOrder[1] + '">' + a2.text + '</div>' +
+            '</div>' +
+        '</div>';
+
+    document.getElementById('matching-area').innerHTML = html;
+    document.getElementById('next-btn').disabled = true;
+
+    setupDragAndDrop();
+
+    trialStartTime = Date.now();
+}
+
+// =====================
+// DRAG AND DROP
+// =====================
+
+function setupDragAndDrop() {
+    var pills = document.querySelectorAll('.answer-pill');
+    var dropZones = document.querySelectorAll('.drop-zone');
+    var pool = document.getElementById('answers-pool');
+
+    pills.forEach(function(pill) {
+        pill.addEventListener('dragstart', function(e) {
+            draggedEl = this;
+            dragSourceZone = this.parentElement;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', this.id);
+        });
+
+        pill.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging');
+            draggedEl = null;
+            dragSourceZone = null;
+            clearHovers();
+        });
+
+        pill.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            draggedEl = this;
+            dragSourceZone = this.parentElement;
+            startTouchDrag(e, this);
+        });
+    });
+
+    dropZones.forEach(function(zone) {
+        zone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('drop-hover');
+        });
+
+        zone.addEventListener('dragleave', function(e) {
+            this.classList.remove('drop-hover');
+        });
+
+        zone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drop-hover');
+            handleDrop(this);
+        });
+    });
+
+    pool.addEventListener('dragover', function(e) {
+        e.preventDefault();
+    });
+
+    pool.addEventListener('drop', function(e) {
+        e.preventDefault();
+        if (draggedEl) {
+            pool.appendChild(draggedEl);
+            draggedEl.classList.remove('in-dropzone');
+            if (dragSourceZone && dragSourceZone.classList.contains('drop-zone')) {
+                dragSourceZone.classList.add('empty');
+                dragSourceZone.classList.remove('filled');
+                dragSourceZone.textContent = 'drag answer here';
+            }
+            checkCompletion();
+        }
+    });
+}
+
+function handleDrop(zone) {
+    if (!draggedEl) return;
+
+    var existingPill = zone.querySelector('.answer-pill');
+    if (existingPill) {
+        if (dragSourceZone && dragSourceZone.classList.contains('drop-zone')) {
+            dragSourceZone.textContent = '';
+            dragSourceZone.appendChild(existingPill);
+            dragSourceZone.classList.remove('empty');
+            dragSourceZone.classList.add('filled');
+        } else {
+            document.getElementById('answers-pool').appendChild(existingPill);
+            existingPill.classList.remove('in-dropzone');
+        }
+    } else {
+        if (dragSourceZone && dragSourceZone.classList.contains('drop-zone')) {
+            dragSourceZone.classList.add('empty');
+            dragSourceZone.classList.remove('filled');
+            dragSourceZone.textContent = 'drag answer here';
+        }
+    }
+
+    zone.textContent = '';
+    zone.appendChild(draggedEl);
+    draggedEl.classList.remove('dragging');
+    draggedEl.classList.add('in-dropzone');
+    zone.classList.remove('empty');
+    zone.classList.add('filled');
+
+    checkCompletion();
+}
+
+function clearHovers() {
+    document.querySelectorAll('.drop-hover').forEach(function(el) {
+        el.classList.remove('drop-hover');
+    });
+}
+
+function checkCompletion() {
+    var drop0 = document.getElementById('drop-0');
+    var drop1 = document.getElementById('drop-1');
+    var filled0 = drop0.querySelector('.answer-pill');
+    var filled1 = drop1.querySelector('.answer-pill');
+    document.getElementById('next-btn').disabled = !(filled0 && filled1);
+}
+
+// =====================
+// TOUCH SUPPORT
+// =====================
+
+function startTouchDrag(e, pill) {
+    var touch = e.touches[0];
+    var clone = pill.cloneNode(true);
+    clone.classList.add('touch-dragging');
+    clone.style.width = pill.offsetWidth + 'px';
+    clone.id = 'touch-clone';
+    document.body.appendChild(clone);
+
+    var offsetX = pill.offsetWidth / 2;
+    var offsetY = pill.offsetHeight / 2;
+    clone.style.left = (touch.clientX - offsetX) + 'px';
+    clone.style.top = (touch.clientY - offsetY) + 'px';
+
+    pill.classList.add('dragging');
+
+    function onTouchMove(e2) {
+        e2.preventDefault();
+        var t = e2.touches[0];
+        clone.style.left = (t.clientX - offsetX) + 'px';
+        clone.style.top = (t.clientY - offsetY) + 'px';
+
+        clone.style.display = 'none';
+        var elBelow = document.elementFromPoint(t.clientX, t.clientY);
+        clone.style.display = '';
+
+        clearHovers();
+        if (elBelow) {
+            var zone = elBelow.closest('.drop-zone');
+            if (zone) zone.classList.add('drop-hover');
+        }
+    }
+
+    function onTouchEnd(e2) {
+        var t = e2.changedTouches[0];
+        clone.style.display = 'none';
+        var elBelow = document.elementFromPoint(t.clientX, t.clientY);
+        clone.style.display = '';
+
+        document.body.removeChild(clone);
+        pill.classList.remove('dragging');
+        clearHovers();
+
+        if (elBelow) {
+            var zone = elBelow.closest('.drop-zone');
+            var pool = elBelow.closest('.answers-pool');
+            if (zone) {
+                handleDrop(zone);
+            } else if (pool) {
+                pool.appendChild(pill);
+                pill.classList.remove('in-dropzone');
+                if (dragSourceZone && dragSourceZone.classList.contains('drop-zone')) {
+                    dragSourceZone.classList.add('empty');
+                    dragSourceZone.classList.remove('filled');
+                    dragSourceZone.textContent = 'drag answer here';
+                }
+                checkCompletion();
+            }
+        }
+
+        draggedEl = null;
+        dragSourceZone = null;
+        document.removeEventListener('touchmove', onTouchMove);
+        document.removeEventListener('touchend', onTouchEnd);
+    }
+
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend', onTouchEnd);
+}
+
+// =====================
+// SUBMIT TRIAL
+// =====================
+
+function submitTrial() {
+    var trial = trials[currentTrialIndex];
+    var rt = Date.now() - trialStartTime;
+
+    var drop0pill = document.getElementById('drop-0').querySelector('.answer-pill');
+    var drop1pill = document.getElementById('drop-1').querySelector('.answer-pill');
+
+    var q0key = document.getElementById('drop-0').getAttribute('data-q-key');
+    var q1key = document.getElementById('drop-1').getAttribute('data-q-key');
+
+    var a0key = drop0pill.getAttribute('data-a-key');
+    var a1key = drop1pill.getAttribute('data-a-key');
+
+    var mapping = {};
+    mapping[q0key] = a0key;
+    mapping[q1key] = a1key;
+
+    // For experimental items: did they match "no" (answer_a) with "urgent" (question_a)?
+    var matchedNoWithUrgent = null;
+    if (trial.type === "experimental") {
+        matchedNoWithUrgent = (mapping["a"] === "a");
+    }
+
+    trialData.push({
+        trial_number: currentTrialIndex + 1,
+        item_id: trial.id,
+        item_type: trial.type,
+        scenario: trial.scenario,
+        question_order: trial._qOrder.join("-"),
+        answer_order: trial._aOrder.join("-"),
+        answer_matched_to_q_a: mapping["a"],
+        answer_matched_to_q_b: mapping["b"],
+        matched_no_with_urgent: matchedNoWithUrgent,
+        rt_ms: rt
+    });
+
+    currentTrialIndex++;
+    showTrial();
+}
+
+// =====================
+// FINISH & DATA
+// =====================
+
+function finishExperiment() {
+    var completionCode = "QUD" + participantId.substring(0, 8).toUpperCase();
+
+    var fullData = {
+        participant_id: participantId,
+        prolific_id: prolificId,
+        timestamp: new Date().toISOString(),
+        user_agent: navigator.userAgent,
+        trials: trialData
+    };
+
+    // Save to GitHub Issues (private data repo)
+    if (GITHUB_TOKEN_B64 && GITHUB_DATA_REPO) {
+        saveToGitHub(fullData, completionCode);
+    } else {
+        console.warn("GitHub not configured — data only available via local download.");
+    }
+
+    document.getElementById('completion-code').textContent = completionCode;
+
+    // Set up Prolific return link
+    document.getElementById('prolific-return-link').href = PROLIFIC_RETURN_URL;
+
+    showScreen('thankyou-screen');
+}
+
+function saveToGitHub(data, completionCode) {
+    // Format trial data as a readable table for the issue body
+    var body = "## Participant Data\n\n";
+    body += "- **Participant ID**: " + data.participant_id + "\n";
+    body += "- **Prolific ID**: " + data.prolific_id + "\n";
+    body += "- **Timestamp**: " + data.timestamp + "\n";
+    body += "- **Completion Code**: " + completionCode + "\n";
+    body += "- **User Agent**: " + data.user_agent + "\n\n";
+    body += "## Trial Data\n\n";
+    body += "| Trial | Item ID | Type | Scenario | Q Order | A Order | A→Qa | A→Qb | No↔Urgent | RT (ms) |\n";
+    body += "|-------|---------|------|----------|---------|---------|------|------|-----------|---------|\n";
+
+    data.trials.forEach(function(t) {
+        body += "| " + [
+            t.trial_number, t.item_id, t.item_type, t.scenario,
+            t.question_order, t.answer_order,
+            t.answer_matched_to_q_a, t.answer_matched_to_q_b,
+            t.matched_no_with_urgent === null ? "—" : t.matched_no_with_urgent,
+            t.rt_ms
+        ].join(" | ") + " |\n";
+    });
+
+    body += "\n---\n\n<details><summary>Raw JSON</summary>\n\n```json\n";
+    body += JSON.stringify(data, null, 2);
+    body += "\n```\n\n</details>";
+
+    fetch("https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + atob(GITHUB_TOKEN_B64),
+            "Accept": "application/vnd.github+json",
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title: "Response: " + data.prolific_id + " — " + data.timestamp,
+            body: body,
+            labels: ["data"]
+        })
+    }).then(function(resp) {
+        if (!resp.ok) {
+            console.error("GitHub save failed:", resp.status);
+        } else {
+            console.log("Data saved to GitHub issue.");
+        }
+    }).catch(function(err) {
+        console.warn("GitHub save failed:", err);
+    });
+}
+
+function downloadData() {
+    // Fallback: download the current session's data as CSV
+    if (trialData.length === 0) {
+        alert("No data collected yet.");
+        return;
+    }
+
+    var csvRows = [
+        "participant_id,prolific_id,timestamp,trial_number,item_id,item_type,scenario,question_order,answer_order,answer_matched_to_q_a,answer_matched_to_q_b,matched_no_with_urgent,rt_ms"
+    ];
+
+    trialData.forEach(function(t) {
+        csvRows.push([
+            participantId,
+            prolificId,
+            new Date().toISOString(),
+            t.trial_number,
+            t.item_id,
+            t.item_type,
+            t.scenario,
+            t.question_order,
+            t.answer_order,
+            t.answer_matched_to_q_a,
+            t.answer_matched_to_q_b,
+            t.matched_no_with_urgent === null ? "" : t.matched_no_with_urgent,
+            t.rt_ms
+        ].join(","));
+    });
+
+    var blob = new Blob([csvRows.join("\n")], {type: "text/csv"});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "qud_matching_exp1_data.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// =====================
+// UTILITIES
+// =====================
+
+function generateUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0;
+        var v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+function shuffleArray(arr) {
+    var shuffled = arr.slice();
+    for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = temp;
+    }
+    return shuffled;
+}
+</script>
+</body>
+</html>
