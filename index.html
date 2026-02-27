@@ -418,21 +418,13 @@
 // =============================================================
 
 // =====================
-// GITHUB CONFIG — Fill these in before deploying
+// RELAY CONFIG — Fill these in before deploying
 // =====================
-// 1. Create a PRIVATE repo (e.g., "qud-experiment-data") to store responses
-// 2. Generate a fine-grained PAT at https://github.com/settings/personal-access-tokens/new
-//    - Scope it to ONLY the private data repo
-//    - Grant "Issues: Read and write" permission (nothing else)
-// 3. Paste the values below:
-// To avoid GitHub's secret scanner blocking your push, the token is stored
-// base64-encoded. To generate yours, run in any browser console:
-//   btoa("YOUR_GITHUB_PAT")
-// Do NOT commit real tokens into this file.
-// Optional runtime override (set from a separate untracked script or browser console):
-//   window.GITHUB_TOKEN_B64_RUNTIME = "BASE64_TOKEN";
-var GITHUB_TOKEN_B64 = "Z2l0aHViX3BhdF8xMUFRUElYVVEwMWgyV3YzVFhLSGs0X1oxM3AzY2ozemZpNDNHdEV5bEJucEN0NjR0QU1IZXd4ajZ0WVlZenMxRFc1RFZaRFFUWnFpcTNreGZh";
-var GITHUB_DATA_REPO = "gaborbrody/qud-experiment-data";
+// 1. Deploy Cloudflare Worker from cloudflare/worker.js
+// 2. Set GH_TOKEN, GH_OWNER, GH_REPO, ALLOWED_ORIGIN in Worker environment
+// 3. Set RELAY_ENDPOINT below (your Worker URL)
+var RELAY_ENDPOINT = "https://qud-relay.gaborbrody.workers.dev";
+var GITHUB_DATA_REPO = "gaborbrody/qud-experiment-data"; // display only
 
 // Prolific return URL — replace XXXXXXX with your study's completion code
 var PROLIFIC_RETURN_URL = "https://app.prolific.com/submissions/complete?cc=XXXXXXX";
@@ -623,11 +615,8 @@ var trialStartTime = 0;
 var draggedEl = null;
 var dragSourceZone = null;
 
-function getGitHubTokenB64() {
-    if (window.GITHUB_TOKEN_B64_RUNTIME) {
-        return window.GITHUB_TOKEN_B64_RUNTIME;
-    }
-    return GITHUB_TOKEN_B64;
+function getRelayEndpoint() {
+    return (RELAY_ENDPOINT || "").trim();
 }
 
 // =====================
@@ -996,24 +985,26 @@ function finishExperiment() {
 
     showScreen('thankyou-screen');
 
-    // Save to GitHub Issues (private data repo)
-    var tokenB64 = getGitHubTokenB64();
-    if (tokenB64 && GITHUB_DATA_REPO) {
+    // Save via server-side relay endpoint
+    var relayEndpoint = getRelayEndpoint();
+    if (relayEndpoint) {
         setGitHubSaveReport("pending", "Uploading response data to GitHub...", [
             "Repository: " + GITHUB_DATA_REPO,
-            "Endpoint: https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues"
+            "Endpoint: " + relayEndpoint,
+            "Mode: relay (server-side token)"
         ]);
 
-        saveToGitHub(fullData, completionCode, tokenB64).then(function(report) {
+        saveToRelay(fullData, completionCode, relayEndpoint).then(function(report) {
             renderGitHubSaveReport(report);
         });
     } else {
         setGitHubSaveReport("error", "GitHub upload is not configured.", [
-            "Missing token or repository setting.",
-            "Set window.GITHUB_TOKEN_B64_RUNTIME to a base64 PAT at runtime.",
+            "Configuration issue detected:",
+            "Missing RELAY_ENDPOINT.",
+            "Set RELAY_ENDPOINT to your deployed Workers URL.",
             "Data is available only via local CSV download."
         ]);
-        console.warn("GitHub not configured — data only available via local download.");
+        console.warn("Relay endpoint is not configured — data only available via local download.");
     }
 }
 
@@ -1030,23 +1021,32 @@ function setGitHubSaveReport(statusType, summary, detailLines) {
     detailsEl.textContent = (detailLines || []).join("\n");
 }
 
-function inferGitHubFailureReason(status, apiMessage) {
+function inferRelayFailureReason(status, apiMessage) {
     var msg = (apiMessage || "").toLowerCase();
 
+    if (status === 400) {
+        return "Relay rejected payload as invalid.";
+    }
     if (status === 401) {
-        return "Unauthorized token. It may be invalid, expired, revoked, or malformed.";
+        return "Relay could not authenticate with GitHub. Server token may be invalid.";
     }
     if (status === 403) {
+        if (msg.indexOf("origin not allowed") !== -1) {
+            return "Request origin is blocked by relay ALLOWED_ORIGIN.";
+        }
         if (msg.indexOf("resource not accessible by personal access token") !== -1) {
-            return "Token lacks required access. Ensure repo access is selected and Issues permission is read/write.";
+            return "Server token lacks required access. Check repo scope and Issues permission.";
         }
         if (msg.indexOf("rate limit") !== -1) {
             return "GitHub API rate limit was exceeded.";
         }
-        return "Request forbidden. Token permissions may be insufficient, or Issues may be disabled.";
+        return "Request forbidden by relay or GitHub permissions.";
     }
     if (status === 404) {
-        return "Repository not found for this token. Check owner/repo and token repository access.";
+        return "Relay endpoint or target repository was not found.";
+    }
+    if (status === 405) {
+        return "Relay endpoint does not allow this HTTP method.";
     }
     if (status === 422) {
         if (msg.indexOf("spammed") !== -1 || msg.indexOf("abuse") !== -1) {
@@ -1054,8 +1054,11 @@ function inferGitHubFailureReason(status, apiMessage) {
         }
         return "Validation failed. Payload or labels may be invalid.";
     }
+    if (status === 502) {
+        return "Relay failed before it got a response from GitHub.";
+    }
     if (status >= 500) {
-        return "GitHub server error. Retry shortly.";
+        return "Relay server error. Check relay env vars and deployment logs.";
     }
     return "Unexpected API response.";
 }
@@ -1094,67 +1097,20 @@ function renderGitHubSaveReport(report) {
     console.error("GitHub save failed.", report);
 }
 
-async function saveToGitHub(data, completionCode, tokenB64) {
+async function saveToRelay(data, completionCode, relayEndpoint) {
     // Format trial data as a readable table for the issue body
-    var body = "## Participant Data\n\n";
-    body += "- **Participant ID**: " + data.participant_id + "\n";
-    body += "- **Prolific ID**: " + data.prolific_id + "\n";
-    body += "- **Timestamp**: " + data.timestamp + "\n";
-    body += "- **Completion Code**: " + completionCode + "\n";
-    body += "- **User Agent**: " + data.user_agent + "\n\n";
-    body += "## Trial Data\n\n";
-    body += "| Trial | Item ID | Type | Scenario | Q Order | A Order | A→Qa | A→Qb | No↔Urgent | RT (ms) |\n";
-    body += "|-------|---------|------|----------|---------|---------|------|------|-----------|---------|\n";
-
-    data.trials.forEach(function(t) {
-        body += "| " + [
-            t.trial_number, t.item_id, t.item_type, t.scenario,
-            t.question_order, t.answer_order,
-            t.answer_matched_to_q_a, t.answer_matched_to_q_b,
-            t.matched_no_with_urgent === null ? "—" : t.matched_no_with_urgent,
-            t.rt_ms
-        ].join(" | ") + " |\n";
-    });
-
-    body += "\n---\n\n<details><summary>Raw JSON</summary>\n\n```json\n";
-    body += JSON.stringify(data, null, 2);
-    body += "\n```\n\n</details>";
-
-    var endpoint = "https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues";
+    var endpoint = relayEndpoint;
     var startedAt = new Date().toISOString();
-    var token = "";
-
-    try {
-        token = atob(tokenB64);
-    } catch (decodeErr) {
-        return {
-            ok: false,
-            status: 0,
-            repo: GITHUB_DATA_REPO,
-            endpoint: endpoint,
-            request_id: "",
-            rate_limit_remaining: "",
-            started_at: startedAt,
-            finished_at: new Date().toISOString(),
-            likely_reason: "Configured token is not valid base64.",
-            github_message: decodeErr && decodeErr.message ? decodeErr.message : String(decodeErr),
-            github_errors: "",
-            documentation_url: ""
-        };
-    }
 
     try {
         var resp = await fetch(endpoint, {
             method: "POST",
             headers: {
-                "Authorization": "Bearer " + token,
-                "Accept": "application/vnd.github+json",
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                title: "Response: " + data.prolific_id + " — " + data.timestamp,
-                body: body,
-                labels: ["data"]
+                data: data,
+                completionCode: completionCode
             })
         });
 
@@ -1166,8 +1122,12 @@ async function saveToGitHub(data, completionCode, tokenB64) {
             payload = null;
         }
 
-        var githubMessage = payload && payload.message ? payload.message : rawText;
-        var requestId = resp.headers.get("x-github-request-id") || "";
+        var githubMessage = payload && (payload.error || payload.message)
+            ? (payload.error || payload.message)
+            : rawText;
+        var requestId = resp.headers.get("x-github-request-id")
+            || (payload && payload.github_request_id ? payload.github_request_id : "")
+            || "";
         var rateLimitRemaining = resp.headers.get("x-ratelimit-remaining") || "";
 
         if (!resp.ok) {
@@ -1180,9 +1140,11 @@ async function saveToGitHub(data, completionCode, tokenB64) {
                 rate_limit_remaining: rateLimitRemaining,
                 started_at: startedAt,
                 finished_at: new Date().toISOString(),
-                likely_reason: inferGitHubFailureReason(resp.status, githubMessage),
+                likely_reason: inferRelayFailureReason(resp.status, githubMessage),
                 github_message: githubMessage,
-                github_errors: payload && payload.errors ? JSON.stringify(payload.errors) : "",
+                github_errors: payload && (payload.github_errors || payload.errors)
+                    ? JSON.stringify(payload.github_errors || payload.errors)
+                    : "",
                 documentation_url: payload && payload.documentation_url ? payload.documentation_url : ""
             };
         }
@@ -1196,8 +1158,8 @@ async function saveToGitHub(data, completionCode, tokenB64) {
             rate_limit_remaining: rateLimitRemaining,
             started_at: startedAt,
             finished_at: new Date().toISOString(),
-            issue_number: payload && payload.number ? payload.number : "n/a",
-            issue_url: payload && payload.html_url ? payload.html_url : ""
+            issue_number: payload && payload.issue_number ? payload.issue_number : "n/a",
+            issue_url: payload && payload.issue_url ? payload.issue_url : ""
         };
     } catch (err) {
         return {
@@ -1209,7 +1171,7 @@ async function saveToGitHub(data, completionCode, tokenB64) {
             rate_limit_remaining: "",
             started_at: startedAt,
             finished_at: new Date().toISOString(),
-            likely_reason: "Network error before receiving a GitHub response (offline, blocked request, or page closed).",
+            likely_reason: "Network error before receiving a relay response (offline, blocked request, or page closed).",
             github_message: err && err.message ? err.message : String(err),
             github_errors: "",
             documentation_url: ""
