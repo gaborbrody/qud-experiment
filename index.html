@@ -428,8 +428,10 @@
 // To avoid GitHub's secret scanner blocking your push, the token is stored
 // base64-encoded. To generate yours, run in any browser console:
 //   btoa("github_pat_YOUR_ACTUAL_TOKEN")
-// Then paste the result below.
-var GITHUB_TOKEN_B64 = "Z2l0aHViX3BhdF8xMUFRUElYVVEwTmFvMUhRMmw5S1BRXzdDQm9HTHFPT3lLRVFYWHFtT0tQQWhobm5ON2pONE5kbHpBU3poaUZSYmJWSzdNR1hUNkx6VUcyR3VY";
+// Do NOT commit real tokens into this file.
+// Optional runtime override (set from a separate untracked script or browser console):
+//   window.GITHUB_TOKEN_B64_RUNTIME = "BASE64_TOKEN";
+var GITHUB_TOKEN_B64 = "";
 var GITHUB_DATA_REPO = "gaborbrody/qud-experiment-data";
 
 // Prolific return URL — replace XXXXXXX with your study's completion code
@@ -620,6 +622,13 @@ var trialStartTime = 0;
 
 var draggedEl = null;
 var dragSourceZone = null;
+
+function getGitHubTokenB64() {
+    if (window.GITHUB_TOKEN_B64_RUNTIME) {
+        return window.GITHUB_TOKEN_B64_RUNTIME;
+    }
+    return GITHUB_TOKEN_B64;
+}
 
 // =====================
 // SETUP
@@ -988,18 +997,20 @@ function finishExperiment() {
     showScreen('thankyou-screen');
 
     // Save to GitHub Issues (private data repo)
-    if (GITHUB_TOKEN_B64 && GITHUB_DATA_REPO) {
+    var tokenB64 = getGitHubTokenB64();
+    if (tokenB64 && GITHUB_DATA_REPO) {
         setGitHubSaveReport("pending", "Uploading response data to GitHub...", [
             "Repository: " + GITHUB_DATA_REPO,
             "Endpoint: https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues"
         ]);
 
-        saveToGitHub(fullData, completionCode).then(function(report) {
+        saveToGitHub(fullData, completionCode, tokenB64).then(function(report) {
             renderGitHubSaveReport(report);
         });
     } else {
         setGitHubSaveReport("error", "GitHub upload is not configured.", [
-            "Missing GITHUB_TOKEN_B64 or GITHUB_DATA_REPO.",
+            "Missing token or repository setting.",
+            "Set window.GITHUB_TOKEN_B64_RUNTIME to a base64 PAT at runtime.",
             "Data is available only via local CSV download."
         ]);
         console.warn("GitHub not configured — data only available via local download.");
@@ -1083,7 +1094,7 @@ function renderGitHubSaveReport(report) {
     console.error("GitHub save failed.", report);
 }
 
-async function saveToGitHub(data, completionCode) {
+async function saveToGitHub(data, completionCode, tokenB64) {
     // Format trial data as a readable table for the issue body
     var body = "## Participant Data\n\n";
     body += "- **Participant ID**: " + data.participant_id + "\n";
@@ -1114,7 +1125,7 @@ async function saveToGitHub(data, completionCode) {
     var token = "";
 
     try {
-        token = atob(GITHUB_TOKEN_B64);
+        token = atob(tokenB64);
     } catch (decodeErr) {
         return {
             ok: false,
@@ -1125,7 +1136,7 @@ async function saveToGitHub(data, completionCode) {
             rate_limit_remaining: "",
             started_at: startedAt,
             finished_at: new Date().toISOString(),
-            likely_reason: "GITHUB_TOKEN_B64 is not valid base64.",
+            likely_reason: "Configured token is not valid base64.",
             github_message: decodeErr && decodeErr.message ? decodeErr.message : String(decodeErr),
             github_errors: "",
             documentation_url: ""
