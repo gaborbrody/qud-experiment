@@ -69,16 +69,6 @@
         margin-bottom: 16px;
     }
 
-    .trial-reminder {
-        font-size: 0.85rem;
-        color: #666;
-        background: #f9f9f9;
-        border-left: 3px solid #ccc;
-        padding: 8px 12px;
-        margin-bottom: 18px;
-        line-height: 1.5;
-    }
-
     .prompt {
         font-weight: 600;
         font-size: 0.95rem;
@@ -217,17 +207,6 @@
         color: #333;
     }
 
-    .download-link {
-        display: inline-block;
-        margin-top: 20px;
-        font-size: 0.8rem;
-        color: #888;
-        text-decoration: underline;
-        cursor: pointer;
-    }
-
-    .download-link:hover { color: #555; }
-
     .completion-code {
         margin-top: 20px;
         padding: 12px 16px;
@@ -279,50 +258,6 @@
     }
 
     .prolific-return:hover { background: #444; }
-
-    .save-report {
-        margin-top: 18px;
-        padding: 12px 14px;
-        border: 1px solid #e0e0e0;
-        border-left: 4px solid #999;
-        border-radius: 6px;
-        background: #fafafa;
-    }
-
-    .save-report.pending {
-        border-left-color: #777;
-        background: #f8f8f8;
-    }
-
-    .save-report.success {
-        border-left-color: #2f7d32;
-        background: #f5fbf6;
-    }
-
-    .save-report.error {
-        border-left-color: #b3261e;
-        background: #fff7f7;
-    }
-
-    .save-report-title {
-        font-size: 0.88rem;
-        font-weight: 600;
-        color: #333;
-        margin-bottom: 4px;
-    }
-
-    .save-report-summary {
-        font-size: 0.9rem;
-        color: #222;
-    }
-
-    .save-report-details {
-        margin-top: 8px;
-        font-size: 0.78rem;
-        color: #444;
-        white-space: pre-wrap;
-        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    }
 
     .touch-dragging {
         position: fixed;
@@ -379,8 +314,7 @@
     <!-- ==================== TRIAL ==================== -->
     <div id="trial-screen" class="screen">
         <div class="progress" id="progress-text"></div>
-        <div class="trial-reminder">If both answers could work for both questions, match them in the way that feels <strong>most natural</strong> to you.</div>
-        <div class="prompt">Match each answer to the question it goes best with.</div>
+        <div class="prompt">Match each answer to the question it goes best with. <em>If both go with both,</em> match them according to which matches better!</div>
         <div class="matching-area" id="matching-area"></div>
         <button class="btn" id="next-btn" disabled onclick="submitTrial()">Next</button>
     </div>
@@ -394,13 +328,9 @@
         <div class="completion-code" id="completion-code"></div>
         <br>
         <a id="prolific-return-link" class="prolific-return" href="#" target="_blank">Return to Prolific</a>
-        <div id="github-save-report" class="save-report pending" role="status" aria-live="polite">
-            <div class="save-report-title">Private Repository Save Status</div>
-            <div class="save-report-summary" id="github-save-summary">Waiting to upload your response data...</div>
-            <div class="save-report-details" id="github-save-details"></div>
+        <div id="github-save-report" role="status" aria-live="polite" style="margin-top: 18px; font-size: 1.4rem; text-align: center;">
+            <span id="github-save-indicator"></span>
         </div>
-        <br>
-        <span class="download-link" onclick="downloadData()">Download data (researcher use)</span>
     </div>
 
 </div>
@@ -427,7 +357,7 @@ var RELAY_ENDPOINT = "https://qud-relay.gaborbrody.workers.dev";
 var GITHUB_DATA_REPO = "gaborbrody/qud-experiment-data"; // display only
 
 // Prolific return URL — replace XXXXXXX with your study's completion code
-var PROLIFIC_RETURN_URL = "https://app.prolific.com/submissions/complete?cc=XXXXXXX";
+var PROLIFIC_RETURN_URL = "https://app.prolific.com/submissions/complete?cc=CU3CXT49";
 // =====================
 // STIMULI
 // =====================
@@ -437,17 +367,17 @@ var practiceItems = [
     {
         id: "practice_time",
         type: "practice_timing",
-        scenario: "doctor_appointment",
+        scenario: "train_ticket",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to get a doctor\'s appointment this week?'
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible to get a ticket for the next train?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to get a doctor\'s appointment this week?'
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible to get a ticket for the next train?'
         },
-        answer_a: { key: "immediate", text: "I\u2019ll call the office right away" },
-        answer_b: { key: "delayed", text: "I can check the schedule whenever" },
+        answer_a: { key: "immediate", text: "Let me check right away." },
+        answer_b: { key: "delayed", text: "You could, but let me tell you some better options." },
         correct_mapping: { "urgent": "immediate", "not_urgent": "delayed" }
     },
     {
@@ -455,16 +385,16 @@ var practiceItems = [
         type: "practice_morality",
         scenario: "umbrella",
         question_a: {
-            urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to grab an umbrella from the lost and found?'
+            urgency: "urgent",
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible to borrow an umbrella from the lost and found?'
         },
         question_b: {
-            urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to steal someone\'s umbrella from the coat rack without them seeing?'
+            urgency: "not_urgent",
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible to take someone\'s lunch from the fridge?'
         },
-        answer_a: { key: "innocent", text: "Yes, they usually don\u2019t mind" },
-        answer_b: { key: "moral", text: "No, that would be wrong" },
-        correct_mapping: { "grab": "innocent", "steal": "moral" }
+        answer_a: { key: "innocent", text: "Yes, just bring it back tomorrow." },
+        answer_b: { key: "moral", text: "No, that wouldn\'t be nice." },
+        correct_mapping: { "borrow": "innocent", "take": "moral" }
     }
 ];
 
@@ -477,92 +407,92 @@ var mainItems = [
         scenario: "stealing_register",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to take money from the cash register without being noticed?'
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible to get away with taking some money from the cash register?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to take money from the cash register without being noticed?'
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible to get away with taking some money from the cash register?'
         },
-        answer_a: { key: "no", text: "No, it would be stealing" },
-        answer_b: { key: "yes", text: "Yes, but it would be stealing" }
+        answer_a: { key: "no", text: "No, it would be really slimy." },
+        answer_b: { key: "yes", text: "Yes, but it would be really slimy." }
     },
     {
         id: "exp_2",
         type: "experimental",
-        scenario: "cheating_exam",
+        scenario: "stealing_whisky",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to copy the answers from the teacher\'s desk without getting caught?'
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible to take a bottle of whisky while the bartender is not looking?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to copy the answers from the teacher\'s desk without getting caught?'
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible to take a bottle of whisky while the bartender is not looking?'
         },
-        answer_a: { key: "no", text: "No, it would be cheating" },
-        answer_b: { key: "yes", text: "Yes, but it would be cheating" }
+        answer_a: { key: "no", text: "No, it would be stealing and I come here all the time." },
+        answer_b: { key: "yes", text: "Yes, but it would be stealing and I come here all the time." }
     },
     {
         id: "exp_3",
         type: "experimental",
-        scenario: "forging_signature",
+        scenario: "hacking_computer",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to forge a parent\'s signature convincingly enough to fool the teacher?'
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible to hack into the professor\'s computer before the exam starts?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to forge a parent\'s signature convincingly enough to fool the teacher?'
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible to hack into the professor\'s computer before the exam starts?'
         },
-        answer_a: { key: "no", text: "No, it would be forgery" },
-        answer_b: { key: "yes", text: "Yes, but it would be forgery" }
+        answer_a: { key: "no", text: "No, it would be completely illegal." },
+        answer_b: { key: "yes", text: "Yes, but it would be completely illegal." }
     },
     {
         id: "exp_4",
         type: "experimental",
-        scenario: "shoplifting",
+        scenario: "forging_signature",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to walk out with the jacket under your coat without the sensors going off?'
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible for you to forge my mom\'s signature on this report card?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to walk out with the jacket under your coat without the sensors going off?'
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible for you to forge my mom\'s signature on this report card?'
         },
-        answer_a: { key: "no", text: "No, it would be stealing" },
-        answer_b: { key: "yes", text: "Yes, but it would be stealing" }
+        answer_a: { key: "no", text: "No, it just wouldn\'t be right." },
+        answer_b: { key: "yes", text: "Yes, but it just wouldn\'t be right." }
     },
 
     // --- TIMING CONTROLS ---
     {
         id: "ctrl_time_1",
         type: "control_timing",
-        scenario: "moving_help",
+        scenario: "car_transmission",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think you could help me move this weekend?'
+            text: '<span class="framing-phrase">Quickly!</span> Would it be possible to order a new transmission for my car?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think you could help me move this weekend?'
+            text: '<span class="framing-phrase">Just wondering...</span> Would it be possible to order a new transmission for my car?'
         },
-        answer_a: { key: "immediate", text: "Let me check, it will only take one moment" },
-        answer_b: { key: "delayed", text: "Sure, I\u2019ll get back to you tomorrow" },
+        answer_a: { key: "immediate", text: "I\'m going to check it immediately." },
+        answer_b: { key: "delayed", text: "Sure, I\u2019ll get back to you tomorrow." },
         correct_mapping: { "urgent": "immediate", "not_urgent": "delayed" }
     },
     {
         id: "ctrl_time_2",
         type: "control_timing",
-        scenario: "plumber",
+        scenario: "basement_plumber",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to get a plumber to fix the leak?'
+            text: '<span class="framing-phrase">Quickly!</span> Is it possible to get a plumber to take a look at our basement?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to get a plumber to fix the leak?'
+            text: '<span class="framing-phrase">Just wondering...</span> Is it possible to get a plumber to take a look at our basement?'
         },
-        answer_a: { key: "immediate", text: "Let me make some calls right now" },
-        answer_b: { key: "delayed", text: "I\u2019ll look into it when I get a chance" },
+        answer_a: { key: "immediate", text: "Let me make some calls right now." },
+        answer_b: { key: "delayed", text: "I\u2019ll look into it when I get a chance." },
         correct_mapping: { "urgent": "immediate", "not_urgent": "delayed" }
     },
 
@@ -573,14 +503,14 @@ var mainItems = [
         scenario: "pen",
         question_a: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to borrow a pen from the front desk?'
+            text: '<span class="framing-phrase">Quickly!</span> Is it possible to borrow a pen from the front desk?'
         },
         question_b: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to take someone\'s pen without them noticing?'
+            text: '<span class="framing-phrase">Just wondering...</span> Is it possible to take someone\'s pen without them noticing?'
         },
-        answer_a: { key: "innocent", text: "Yes, they usually have extras" },
-        answer_b: { key: "moral", text: "No, that would be wrong" },
+        answer_a: { key: "innocent", text: "Yes, they usually have extras." },
+        answer_b: { key: "moral", text: "No, that would be wrong." },
         correct_mapping: { "borrow": "innocent", "take": "moral" }
     },
     {
@@ -589,14 +519,14 @@ var mainItems = [
         scenario: "neighbor",
         question_a: {
             urgency: "not_urgent",
-            text: '<span class="framing-phrase">This is not urgent at all</span> &mdash; do you think it\'s possible to ask the neighbor to turn down the music?'
+            text: '<span class="framing-phrase">Just wondering...</span> Is it possible to ask the neighbor to turn down the music?'
         },
         question_b: {
             urgency: "urgent",
-            text: '<span class="framing-phrase">This is very urgent</span> &mdash; do you think it\'s possible to slash the neighbor\'s tires so they can\'t go to the party?'
+            text: '<span class="framing-phrase">Quickly!</span> Is it possible to slash the neighbor\'s tires so they can\'t go to the party?'
         },
-        answer_a: { key: "innocent", text: "Yes, just knock on their door" },
-        answer_b: { key: "moral", text: "No, that would be terrible" },
+        answer_a: { key: "innocent", text: "Yes, just knock on their door." },
+        answer_b: { key: "moral", text: "No, that would be terrible." },
         correct_mapping: { "ask": "innocent", "slash": "moral" }
     }
 ];
@@ -968,7 +898,7 @@ function submitTrial() {
 // =====================
 
 function finishExperiment() {
-    var completionCode = "QUD" + participantId.substring(0, 8).toUpperCase();
+    var completionCode = "CU3CXT49".toUpperCase();
 
     var fullData = {
         participant_id: participantId,
@@ -1009,16 +939,19 @@ function finishExperiment() {
 }
 
 function setGitHubSaveReport(statusType, summary, detailLines) {
-    var reportEl = document.getElementById('github-save-report');
-    var summaryEl = document.getElementById('github-save-summary');
-    var detailsEl = document.getElementById('github-save-details');
+    var indicator = document.getElementById('github-save-indicator');
+    if (!indicator) return;
 
-    if (!reportEl || !summaryEl || !detailsEl) return;
-
-    reportEl.classList.remove('pending', 'success', 'error');
-    reportEl.classList.add(statusType);
-    summaryEl.textContent = summary;
-    detailsEl.textContent = (detailLines || []).join("\n");
+    if (statusType === "success") {
+        indicator.textContent = "\u2705";
+        indicator.title = "Data saved successfully";
+    } else if (statusType === "error") {
+        indicator.textContent = "\u274C";
+        indicator.title = summary + " " + (detailLines || []).join(" ");
+    } else {
+        indicator.textContent = "\u23F3";
+        indicator.title = "Uploading...";
+    }
 }
 
 function inferRelayFailureReason(status, apiMessage) {
@@ -1064,37 +997,13 @@ function inferRelayFailureReason(status, apiMessage) {
 }
 
 function renderGitHubSaveReport(report) {
-    var details = [
-        "Timestamp: " + report.finished_at,
-        "Repository: " + report.repo,
-        "Endpoint: " + (report.endpoint || "n/a"),
-        "HTTP status: " + report.status,
-        "GitHub request ID: " + (report.request_id || "n/a"),
-        "Rate limit remaining: " + (report.rate_limit_remaining || "n/a")
-    ];
-
     if (report.ok) {
-        if (typeof report.issue_number === "number") {
-            details.push("Issue number: #" + report.issue_number);
-        } else {
-            details.push("Issue number: " + report.issue_number);
-        }
-        details.push("Issue URL: " + (report.issue_url || "n/a"));
-        setGitHubSaveReport("success", "Data upload succeeded.", details);
+        setGitHubSaveReport("success", "Data saved.", []);
         console.log("Data saved to GitHub issue.", report);
-        return;
+    } else {
+        setGitHubSaveReport("error", "Data upload failed.", [report.likely_reason || ""]);
+        console.error("GitHub save failed.", report);
     }
-
-    details.push("Likely reason: " + report.likely_reason);
-    details.push("GitHub message: " + (report.github_message || "n/a"));
-    if (report.github_errors) {
-        details.push("GitHub errors: " + report.github_errors);
-    }
-    if (report.documentation_url) {
-        details.push("Docs: " + report.documentation_url);
-    }
-    setGitHubSaveReport("error", "Data upload failed.", details);
-    console.error("GitHub save failed.", report);
 }
 
 async function saveToRelay(data, completionCode, relayEndpoint) {
@@ -1128,6 +1037,9 @@ async function saveToRelay(data, completionCode, relayEndpoint) {
         var requestId = resp.headers.get("x-github-request-id")
             || (payload && payload.github_request_id ? payload.github_request_id : "")
             || "";
+        var relayVersion = resp.headers.get("x-relay-version")
+            || (payload && payload.relay_version ? payload.relay_version : "")
+            || "";
         var rateLimitRemaining = resp.headers.get("x-ratelimit-remaining") || "";
 
         if (!resp.ok) {
@@ -1136,6 +1048,7 @@ async function saveToRelay(data, completionCode, relayEndpoint) {
                 status: resp.status,
                 repo: GITHUB_DATA_REPO,
                 endpoint: endpoint,
+                relay_version: relayVersion,
                 request_id: requestId,
                 rate_limit_remaining: rateLimitRemaining,
                 started_at: startedAt,
@@ -1154,6 +1067,7 @@ async function saveToRelay(data, completionCode, relayEndpoint) {
             status: resp.status,
             repo: GITHUB_DATA_REPO,
             endpoint: endpoint,
+            relay_version: relayVersion,
             request_id: requestId,
             rate_limit_remaining: rateLimitRemaining,
             started_at: startedAt,
@@ -1167,11 +1081,12 @@ async function saveToRelay(data, completionCode, relayEndpoint) {
             status: 0,
             repo: GITHUB_DATA_REPO,
             endpoint: endpoint,
+            relay_version: "",
             request_id: "",
             rate_limit_remaining: "",
             started_at: startedAt,
             finished_at: new Date().toISOString(),
-            likely_reason: "Network error before receiving a relay response (offline, blocked request, or page closed).",
+            likely_reason: "Network/CORS error before relay response (Worker URL unreachable, origin blocked, or page closed).",
             github_message: err && err.message ? err.message : String(err),
             github_errors: "",
             documentation_url: ""
