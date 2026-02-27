@@ -280,6 +280,50 @@
 
     .prolific-return:hover { background: #444; }
 
+    .save-report {
+        margin-top: 18px;
+        padding: 12px 14px;
+        border: 1px solid #e0e0e0;
+        border-left: 4px solid #999;
+        border-radius: 6px;
+        background: #fafafa;
+    }
+
+    .save-report.pending {
+        border-left-color: #777;
+        background: #f8f8f8;
+    }
+
+    .save-report.success {
+        border-left-color: #2f7d32;
+        background: #f5fbf6;
+    }
+
+    .save-report.error {
+        border-left-color: #b3261e;
+        background: #fff7f7;
+    }
+
+    .save-report-title {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 4px;
+    }
+
+    .save-report-summary {
+        font-size: 0.9rem;
+        color: #222;
+    }
+
+    .save-report-details {
+        margin-top: 8px;
+        font-size: 0.78rem;
+        color: #444;
+        white-space: pre-wrap;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
     .touch-dragging {
         position: fixed;
         z-index: 1000;
@@ -350,6 +394,11 @@
         <div class="completion-code" id="completion-code"></div>
         <br>
         <a id="prolific-return-link" class="prolific-return" href="#" target="_blank">Return to Prolific</a>
+        <div id="github-save-report" class="save-report pending" role="status" aria-live="polite">
+            <div class="save-report-title">Private Repository Save Status</div>
+            <div class="save-report-summary" id="github-save-summary">Waiting to upload your response data...</div>
+            <div class="save-report-details" id="github-save-details"></div>
+        </div>
         <br>
         <span class="download-link" onclick="downloadData()">Download data (researcher use)</span>
     </div>
@@ -931,22 +980,110 @@ function finishExperiment() {
         trials: trialData
     };
 
-    // Save to GitHub Issues (private data repo)
-    if (GITHUB_TOKEN_B64 && GITHUB_DATA_REPO) {
-        saveToGitHub(fullData, completionCode);
-    } else {
-        console.warn("GitHub not configured — data only available via local download.");
-    }
-
     document.getElementById('completion-code').textContent = completionCode;
 
     // Set up Prolific return link
     document.getElementById('prolific-return-link').href = PROLIFIC_RETURN_URL;
 
     showScreen('thankyou-screen');
+
+    // Save to GitHub Issues (private data repo)
+    if (GITHUB_TOKEN_B64 && GITHUB_DATA_REPO) {
+        setGitHubSaveReport("pending", "Uploading response data to GitHub...", [
+            "Repository: " + GITHUB_DATA_REPO,
+            "Endpoint: https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues"
+        ]);
+
+        saveToGitHub(fullData, completionCode).then(function(report) {
+            renderGitHubSaveReport(report);
+        });
+    } else {
+        setGitHubSaveReport("error", "GitHub upload is not configured.", [
+            "Missing GITHUB_TOKEN_B64 or GITHUB_DATA_REPO.",
+            "Data is available only via local CSV download."
+        ]);
+        console.warn("GitHub not configured — data only available via local download.");
+    }
 }
 
-function saveToGitHub(data, completionCode) {
+function setGitHubSaveReport(statusType, summary, detailLines) {
+    var reportEl = document.getElementById('github-save-report');
+    var summaryEl = document.getElementById('github-save-summary');
+    var detailsEl = document.getElementById('github-save-details');
+
+    if (!reportEl || !summaryEl || !detailsEl) return;
+
+    reportEl.classList.remove('pending', 'success', 'error');
+    reportEl.classList.add(statusType);
+    summaryEl.textContent = summary;
+    detailsEl.textContent = (detailLines || []).join("\n");
+}
+
+function inferGitHubFailureReason(status, apiMessage) {
+    var msg = (apiMessage || "").toLowerCase();
+
+    if (status === 401) {
+        return "Unauthorized token. It may be invalid, expired, revoked, or malformed.";
+    }
+    if (status === 403) {
+        if (msg.indexOf("resource not accessible by personal access token") !== -1) {
+            return "Token lacks required access. Ensure repo access is selected and Issues permission is read/write.";
+        }
+        if (msg.indexOf("rate limit") !== -1) {
+            return "GitHub API rate limit was exceeded.";
+        }
+        return "Request forbidden. Token permissions may be insufficient, or Issues may be disabled.";
+    }
+    if (status === 404) {
+        return "Repository not found for this token. Check owner/repo and token repository access.";
+    }
+    if (status === 422) {
+        if (msg.indexOf("spammed") !== -1 || msg.indexOf("abuse") !== -1) {
+            return "GitHub flagged this request as spam/abuse. Retry later with less frequent submissions.";
+        }
+        return "Validation failed. Payload or labels may be invalid.";
+    }
+    if (status >= 500) {
+        return "GitHub server error. Retry shortly.";
+    }
+    return "Unexpected API response.";
+}
+
+function renderGitHubSaveReport(report) {
+    var details = [
+        "Timestamp: " + report.finished_at,
+        "Repository: " + report.repo,
+        "Endpoint: " + (report.endpoint || "n/a"),
+        "HTTP status: " + report.status,
+        "GitHub request ID: " + (report.request_id || "n/a"),
+        "Rate limit remaining: " + (report.rate_limit_remaining || "n/a")
+    ];
+
+    if (report.ok) {
+        if (typeof report.issue_number === "number") {
+            details.push("Issue number: #" + report.issue_number);
+        } else {
+            details.push("Issue number: " + report.issue_number);
+        }
+        details.push("Issue URL: " + (report.issue_url || "n/a"));
+        setGitHubSaveReport("success", "Data upload succeeded.", details);
+        console.log("Data saved to GitHub issue.", report);
+        return;
+    }
+
+    details.push("Likely reason: " + report.likely_reason);
+    details.push("GitHub message: " + (report.github_message || "n/a"));
+    if (report.github_errors) {
+        details.push("GitHub errors: " + report.github_errors);
+    }
+    if (report.documentation_url) {
+        details.push("Docs: " + report.documentation_url);
+    }
+    setGitHubSaveReport("error", "Data upload failed.", details);
+    console.error("GitHub save failed.", report);
+}
+
+async function saveToGitHub(data, completionCode) {
     // Format trial data as a readable table for the issue body
     var body = "## Participant Data\n\n";
     body += "- **Participant ID**: " + data.participant_id + "\n";
@@ -972,27 +1109,101 @@ function saveToGitHub(data, completionCode) {
     body += JSON.stringify(data, null, 2);
     body += "\n```\n\n</details>";
 
-    fetch("https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues", {
-        method: "POST",
-        headers: {
-            "Authorization": "Bearer " + atob(GITHUB_TOKEN_B64),
-            "Accept": "application/vnd.github+json",
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            title: "Response: " + data.prolific_id + " — " + data.timestamp,
-            body: body,
-            labels: ["data"]
-        })
-    }).then(function(resp) {
-        if (!resp.ok) {
-            console.error("GitHub save failed:", resp.status);
-        } else {
-            console.log("Data saved to GitHub issue.");
+    var endpoint = "https://api.github.com/repos/" + GITHUB_DATA_REPO + "/issues";
+    var startedAt = new Date().toISOString();
+    var token = "";
+
+    try {
+        token = atob(GITHUB_TOKEN_B64);
+    } catch (decodeErr) {
+        return {
+            ok: false,
+            status: 0,
+            repo: GITHUB_DATA_REPO,
+            endpoint: endpoint,
+            request_id: "",
+            rate_limit_remaining: "",
+            started_at: startedAt,
+            finished_at: new Date().toISOString(),
+            likely_reason: "GITHUB_TOKEN_B64 is not valid base64.",
+            github_message: decodeErr && decodeErr.message ? decodeErr.message : String(decodeErr),
+            github_errors: "",
+            documentation_url: ""
+        };
+    }
+
+    try {
+        var resp = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Authorization": "Bearer " + token,
+                "Accept": "application/vnd.github+json",
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title: "Response: " + data.prolific_id + " — " + data.timestamp,
+                body: body,
+                labels: ["data"]
+            })
+        });
+
+        var rawText = await resp.text();
+        var payload = null;
+        try {
+            payload = rawText ? JSON.parse(rawText) : null;
+        } catch (jsonErr) {
+            payload = null;
         }
-    }).catch(function(err) {
-        console.warn("GitHub save failed:", err);
-    });
+
+        var githubMessage = payload && payload.message ? payload.message : rawText;
+        var requestId = resp.headers.get("x-github-request-id") || "";
+        var rateLimitRemaining = resp.headers.get("x-ratelimit-remaining") || "";
+
+        if (!resp.ok) {
+            return {
+                ok: false,
+                status: resp.status,
+                repo: GITHUB_DATA_REPO,
+                endpoint: endpoint,
+                request_id: requestId,
+                rate_limit_remaining: rateLimitRemaining,
+                started_at: startedAt,
+                finished_at: new Date().toISOString(),
+                likely_reason: inferGitHubFailureReason(resp.status, githubMessage),
+                github_message: githubMessage,
+                github_errors: payload && payload.errors ? JSON.stringify(payload.errors) : "",
+                documentation_url: payload && payload.documentation_url ? payload.documentation_url : ""
+            };
+        }
+
+        return {
+            ok: true,
+            status: resp.status,
+            repo: GITHUB_DATA_REPO,
+            endpoint: endpoint,
+            request_id: requestId,
+            rate_limit_remaining: rateLimitRemaining,
+            started_at: startedAt,
+            finished_at: new Date().toISOString(),
+            issue_number: payload && payload.number ? payload.number : "n/a",
+            issue_url: payload && payload.html_url ? payload.html_url : ""
+        };
+    } catch (err) {
+        return {
+            ok: false,
+            status: 0,
+            repo: GITHUB_DATA_REPO,
+            endpoint: endpoint,
+            request_id: "",
+            rate_limit_remaining: "",
+            started_at: startedAt,
+            finished_at: new Date().toISOString(),
+            likely_reason: "Network error before receiving a GitHub response (offline, blocked request, or page closed).",
+            github_message: err && err.message ? err.message : String(err),
+            github_errors: "",
+            documentation_url: ""
+        };
+    }
 }
 
 function downloadData() {
