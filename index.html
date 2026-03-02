@@ -284,7 +284,7 @@
         <div class="consent-text">
             <p>Consent statement: By answering the following questions, you are consenting to participate in a research study being performed by Dr. Gabor Brody, PhD, at Yale University. (<a href="mailto:gabor.brody@yale.edu">gabor.brody@yale.edu</a>).</p>
             <p>In this research, you will: see or hear written short stories, sentences or words, videos and/or images. You will be asked to choose between two or more alternatives or give ratings using a keyboard or mouse.</p>
-            <p>If you have questions about the research, please contact <a href="mailto:gabor.brody@yale.edu">gabor.brody@yale.edu</a>. Participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation at any time without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you, and all data will be coded with subject numbers separate from your Mturk/Prolific/Testable ID. Anonymized data may be shared with collaborating universities.</p>
+            <p>If you have questions about the research, please contact <a href="mailto:gabor.brody@yale.edu">gabor.brody@yale.edu</a>. Participation in this research is voluntary. You may decline to answer any or all of the following questions. You may decline further participation at any time without adverse consequences. Your anonymity is assured; the researchers who have requested your participation will not receive any personal information about you, and all data will be coded with subject numbers separate from your Prolific ID. Anonymized data may be shared with collaborating universities.</p>
             <p><strong>I have read and understood the consent statement. I am at least 18 years of age.</strong></p>
         </div>
         <button class="btn" onclick="showInstructions()">I consent</button>
@@ -357,7 +357,7 @@ var RELAY_ENDPOINT = "https://qud-relay.gaborbrody.workers.dev";
 var GITHUB_DATA_REPO = "gaborbrody/qud-experiment-data"; // display only
 
 // Prolific return URL — replace XXXXXXX with your study's completion code
-var PROLIFIC_RETURN_URL = "https://app.prolific.com/submissions/complete?cc=CU3CXT49";
+var PROLIFIC_RETURN_URL = "https://app.prolific.com/submissions/complete?cc=C53G0F7S";
 // =====================
 // STIMULI
 // =====================
@@ -898,7 +898,7 @@ function submitTrial() {
 // =====================
 
 function finishExperiment() {
-    var completionCode = "CU3CXT49".toUpperCase();
+    var completionCode = "C53G0F7S".toUpperCase();
 
     var fullData = {
         participant_id: participantId,
